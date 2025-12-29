@@ -24,8 +24,8 @@ logs/
 *.log
 npm-debug.log*
 
-# Prisma
-prisma/migrations/
+# Prisma (keep migrations in version control)
+# prisma/migrations/
 
 # Test
 coverage/
