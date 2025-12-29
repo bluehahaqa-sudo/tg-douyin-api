@@ -1,0 +1,285 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model User {
+  id              Int       @id @default(autoincrement())
+  telegramId      BigInt    @unique @map("telegram_id")
+  username        String?
+  firstName       String?   @map("first_name")
+  lastName        String?   @map("last_name")
+  avatarUrl       String?   @map("avatar_url")
+
+  // 账户信息
+  douyinId        String    @unique @map("douyin_id")
+  coins           Float     @default(0)
+
+  // 权限
+  isAdultUnlocked Boolean   @default(false) @map("is_adult_unlocked")
+  adultUnlockType String?   @map("adult_unlock_type") // permanent / temporary
+  adultUnlockExpire DateTime? @map("adult_unlock_expire")
+
+  // 邀请
+  invitedBy       BigInt?   @map("invited_by")
+  inviteCode      String    @unique @map("invite_code")
+  inviteCount     Int       @default(0) @map("invite_count")
+
+  // 状态
+  isBanned        Boolean   @default(false) @map("is_banned")
+  isCreator       Boolean   @default(false) @map("is_creator")
+  isLiveEnabled   Boolean   @default(false) @map("is_live_enabled")
+  isVip           Boolean   @default(false) @map("is_vip")
+  vipExpire       DateTime? @map("vip_expire")
+
+  // 设置
+  notifyLikes     Boolean   @default(true) @map("notify_likes")
+  notifyComments  Boolean   @default(true) @map("notify_comments")
+  notifyFollowers Boolean   @default(true) @map("notify_followers")
+  notifySystem    Boolean   @default(true) @map("notify_system")
+
+  privacyShowLikes   Boolean @default(true) @map("privacy_show_likes")
+  privacyShowFollows Boolean @default(true) @map("privacy_show_follows")
+  privacyAllowMsg    Boolean @default(true) @map("privacy_allow_msg")
+  privacyAllowDuet   Boolean @default(true) @map("privacy_allow_duet")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // 关联
+  transactions    CoinTransaction[]
+  inviteRecords   InviteRecord[] @relation("Inviter")
+  invitedRecords  InviteRecord[] @relation("Invitee")
+  videos          Video[]
+  liveApplications LiveApplication[]
+
+  // 社交关联
+  following       Follow[] @relation("Follower")
+  followers       Follow[] @relation("Following")
+
+  // 互动关联
+  likes           Like[]
+  collects        Collect[]
+  comments        Comment[]
+
+  // 通知关联
+  notifications         Notification[] @relation("NotificationReceiver")
+  notificationsSent     Notification[] @relation("NotificationSender")
+
+  // 私信关联
+  sentMessages          Message[] @relation("MessageSender")
+  receivedMessages      Message[] @relation("MessageReceiver")
+
+  @@map("users")
+}
+
+// 抖币流水表
+model CoinTransaction {
+  id            Int      @id @default(autoincrement())
+  userId        BigInt   @map("user_id")
+  type          String   // invite_reward, recharge, gift, withdraw, daily_checkin
+  amount        Float
+  balanceAfter  Float    @map("balance_after")
+  description   String?
+  relatedUserId BigInt?  @map("related_user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user          User     @relation(fields: [userId], references: [telegramId])
+
+  @@map("coin_transactions")
+}
+
+// 邀请记录表
+model InviteRecord {
+  id          Int      @id @default(autoincrement())
+  inviterId   BigInt   @map("inviter_id")
+  inviteeId   BigInt   @map("invitee_id")
+  rewardCoins Float    @default(0) @map("reward_coins")
+  isRewarded  Boolean  @default(false) @map("is_rewarded")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  inviter     User     @relation("Inviter", fields: [inviterId], references: [telegramId])
+  invitee     User     @relation("Invitee", fields: [inviteeId], references: [telegramId])
+
+  @@map("invite_records")
+}
+
+// 视频表
+model Video {
+  id            Int      @id @default(autoincrement())
+  odId         String    @unique @map("video_id") // 视频唯一标识
+  userId        BigInt   @map("user_id")
+
+  title         String?
+  description   String?
+  videoUrl      String   @map("video_url")
+  coverUrl      String?  @map("cover_url")
+  duration      Int?     // 时长秒
+
+  isAdult       Boolean  @default(false) @map("is_adult")
+  category      String?
+  tags          String?  // JSON array string
+
+  viewCount     Int      @default(0) @map("view_count")
+  likeCount     Int      @default(0) @map("like_count")
+  commentCount  Int      @default(0) @map("comment_count")
+  shareCount    Int      @default(0) @map("share_count")
+
+  status        String   @default("pending") // pending, approved, rejected
+  isRecommended Boolean  @default(false) @map("is_recommended")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User     @relation(fields: [userId], references: [telegramId])
+
+  // 互动关联
+  likes         Like[]
+  collects      Collect[]
+  comments      Comment[]
+
+  @@map("videos")
+}
+
+// 直播申请表
+model LiveApplication {
+  id          Int       @id @default(autoincrement())
+  userId      BigInt    @map("user_id")
+  reason      String?
+  status      String    @default("pending") // pending, approved, rejected
+  reviewedAt  DateTime? @map("reviewed_at")
+  reviewedBy  BigInt?   @map("reviewed_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User      @relation(fields: [userId], references: [telegramId])
+
+  @@map("live_applications")
+}
+
+// 每日签到表
+model DailyCheckin {
+  id          Int      @id @default(autoincrement())
+  telegramId  BigInt   @map("telegram_id")
+  checkinDate String   @map("checkin_date") // YYYY-MM-DD
+  reward      Float    @default(5)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([telegramId, checkinDate])
+  @@map("daily_checkins")
+}
+
+// 关注关系表
+model Follow {
+  id          Int      @id @default(autoincrement())
+  followerId  BigInt   @map("follower_id")   // 关注者
+  followingId BigInt   @map("following_id")  // 被关注者
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  follower    User     @relation("Follower", fields: [followerId], references: [telegramId])
+  following   User     @relation("Following", fields: [followingId], references: [telegramId])
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+// 点赞表
+model Like {
+  id        Int      @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  videoId   Int      @map("video_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [telegramId])
+  video     Video    @relation(fields: [videoId], references: [id])
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
+  @@map("likes")
+}
+
+// 收藏表
+model Collect {
+  id        Int      @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  videoId   Int      @map("video_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [telegramId])
+  video     Video    @relation(fields: [videoId], references: [id])
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
+  @@map("collects")
+}
+
+// 评论表
+model Comment {
+  id        Int      @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  videoId   Int      @map("video_id")
+  parentId  Int?     @map("parent_id")     // 父评论ID，用于回复
+  content   String
+  likeCount Int      @default(0) @map("like_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User     @relation(fields: [userId], references: [telegramId])
+  video     Video    @relation(fields: [videoId], references: [id])
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+
+  @@index([userId])
+  @@index([videoId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+// 通知表
+model Notification {
+  id          Int      @id @default(autoincrement())
+  receiverId  BigInt   @map("receiver_id")  // 接收者
+  senderId    BigInt?  @map("sender_id")    // 发送者（系统通知可为空）
+  type        String   // like, comment, follow, mention, system
+  content     String?  // 通知内容
+  relatedId   Int?     @map("related_id")   // 关联ID（视频ID/评论ID等）
+  relatedType String?  @map("related_type") // video, comment, user
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  receiver    User     @relation("NotificationReceiver", fields: [receiverId], references: [telegramId])
+  sender      User?    @relation("NotificationSender", fields: [senderId], references: [telegramId])
+
+  @@index([receiverId])
+  @@index([senderId])
+  @@index([type])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+// 私信表
+model Message {
+  id          Int      @id @default(autoincrement())
+  senderId    BigInt   @map("sender_id")
+  receiverId  BigInt   @map("receiver_id")
+  content     String
+  messageType String   @default("text") @map("message_type") // text, image, video
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  sender      User     @relation("MessageSender", fields: [senderId], references: [telegramId])
+  receiver    User     @relation("MessageReceiver", fields: [receiverId], references: [telegramId])
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([senderId, receiverId])
+  @@map("messages")
+}
