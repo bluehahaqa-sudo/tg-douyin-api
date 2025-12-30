@@ -133,7 +133,8 @@ async function fetchData() {
 
 //TODO 有个bug，一开始只返回了6条数据，但第二次前端传过来的pageNo是2了，就是会从第10条数据开始返回，导致中间漏了4条
 export async function startMock() {
-  mock.onGet(/video\/recommended/).reply(async (config) => {
+  // 匹配 /api/video/recommend 或 /video/recommended
+  mock.onGet(/\/api\/video\/recommend|video\/recommended/).reply(async (config) => {
     const { start, pageSize } = config.params
     // console.log('allRecommendVideos', cloneDeep(allRecommendVideos.length), config.params)
     return [
@@ -148,22 +149,24 @@ export async function startMock() {
       }
     ]
   })
-  mock.onGet(/video\/long\/recommended/).reply(async (config) => {
-    const page = getPage2(config.params)
-    return [
-      200,
-      {
-        data: {
-          total: 844,
-          list: allRecommendVideos.slice(page.offset, page.limit)
-        },
-        code: 200,
-        msg: ''
-      }
-    ]
-  })
+  mock
+    .onGet(/\/api\/video\/recommend.*type=long|video\/long\/recommended/)
+    .reply(async (config) => {
+      const page = getPage2(config.params)
+      return [
+        200,
+        {
+          data: {
+            total: 844,
+            list: allRecommendVideos.slice(page.offset, page.limit)
+          },
+          code: 200,
+          msg: ''
+        }
+      ]
+    })
 
-  mock.onGet(/video\/comments/).reply(async (config) => {
+  mock.onGet(/\/api\/video\/.*\/comments|video\/comments/).reply(async (config) => {
     const videoIds = [
       '7260749400622894336',
       '7128686458763889956',
@@ -194,7 +197,7 @@ export async function startMock() {
     return [200, { code: 500 }]
   })
 
-  mock.onGet(/video\/private/).reply(async (config) => {
+  mock.onGet(/\/api\/video\/private|video\/private/).reply(async (config) => {
     const page = getPage2(config.params)
     return [
       200,
@@ -209,7 +212,7 @@ export async function startMock() {
     ]
   })
 
-  mock.onGet(/video\/like/).reply(async (config) => {
+  mock.onGet(/\/api\/video\/liked|video\/like/).reply(async (config) => {
     const page = getPage2(config.params)
     return [
       200,
@@ -224,7 +227,7 @@ export async function startMock() {
     ]
   })
 
-  mock.onGet(/video\/my/).reply(async (config) => {
+  mock.onGet(/\/api\/video\/my|video\/my/).reply(async (config) => {
     const page = getPage2(config.params)
     if (!userVideos.length) {
       // let r = await fetch(BASE_URL + '/data/user-71158770.json')
@@ -257,7 +260,7 @@ export async function startMock() {
     ]
   })
 
-  mock.onGet(/video\/history/).reply(async (config) => {
+  mock.onGet(/\/api\/video\/history|video\/history/).reply(async (config) => {
     const page = getPage2(config.params)
     return [
       200,
@@ -272,7 +275,7 @@ export async function startMock() {
     ]
   })
 
-  mock.onGet(/user\/collect/).reply(async () => {
+  mock.onGet(/\/api\/user\/collections|user\/collect/).reply(async () => {
     return [
       200,
       {
@@ -292,7 +295,7 @@ export async function startMock() {
     ]
   })
 
-  mock.onGet(/user\/video_list/).reply(async (config) => {
+  mock.onGet(/\/api\/video\/user|user\/video_list/).reply(async (config) => {
     const id = config.params.id
     const r2 = await _fetch(`${FILE_URL}/user_video_list/user-${id}.md`)
     const v = await r2.json()
@@ -302,7 +305,7 @@ export async function startMock() {
     return [200, { code: 500 }]
   })
 
-  mock.onGet(/user\/panel/).reply(async () => {
+  mock.onGet(/\/api\/user\/profile|user\/panel/).reply(async () => {
     const r2 = await _fetch(BASE_URL + '/data/users.md')
     const v = await r2.json()
     // let item = v.find(a => a.uid === '68310389333')
@@ -314,7 +317,7 @@ export async function startMock() {
     return [200, { code: 500 }]
   })
 
-  mock.onGet(/user\/friends/).reply(async () => {
+  mock.onGet(/\/api\/social\/friends|user\/friends/).reply(async () => {
     const r2 = await _fetch(BASE_URL + '/data/users.md')
     const v = await r2.json()
     return [200, { data: v, code: 200 }]
@@ -336,7 +339,7 @@ export async function startMock() {
     ]
   })
 
-  mock.onGet(/post\/recommended/).reply(async (config) => {
+  mock.onGet(/\/api\/post\/recommended|post\/recommended/).reply(async (config) => {
     const page = getPage2(config.params)
 
     if (!allRecommendPosts.length) {
@@ -357,7 +360,7 @@ export async function startMock() {
     ]
   })
 
-  mock.onGet(/shop\/recommended/).reply(async (config) => {
+  mock.onGet(/\/api\/shop\/recommended|shop\/recommended/).reply(async (config) => {
     const page = getPage2(config.params)
 
     const r2 = await _fetch(BASE_URL + '/data/goods.md')

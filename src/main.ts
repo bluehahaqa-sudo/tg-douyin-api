@@ -8,10 +8,25 @@ import VueLazyload from '@jambonn/vue-lazyload'
 import { createPinia } from 'pinia'
 import { useClick } from '@/utils/hooks/useClick'
 import bus, { EVENT_KEY } from '@/utils/bus'
+import { initAuth } from '@/api/auth'
 
 window.isMoved = false
-window.isMuted = true
-window.showMutedNotice = true
+// 检测是否在 Telegram Mini App 环境中
+const isTelegramWebApp = !!(window as any).Telegram?.WebApp
+
+// 初始化 Telegram 认证
+if (isTelegramWebApp) {
+  initAuth().then((success) => {
+    if (success) {
+      console.log('Telegram auth successful')
+    } else {
+      console.warn('Telegram auth failed')
+    }
+  })
+}
+// Telegram 环境下可以自动播放声音，普通浏览器需要静音
+window.isMuted = !isTelegramWebApp
+window.showMutedNotice = !isTelegramWebApp
 HTMLElement.prototype.addEventListener = new Proxy(HTMLElement.prototype.addEventListener, {
   apply(target, ctx, args) {
     const eventName = args[0]
@@ -51,10 +66,13 @@ app.directive('click', vClick)
 
 //放到最后才可以使用pinia
 startMock()
-setTimeout(() => {
-  bus.emit(EVENT_KEY.HIDE_MUTED_NOTICE)
-  window.showMutedNotice = false
-}, 2000)
+// 只有在非 Telegram 环境下才需要延迟隐藏静音提示
+if (!isTelegramWebApp) {
+  setTimeout(() => {
+    bus.emit(EVENT_KEY.HIDE_MUTED_NOTICE)
+    window.showMutedNotice = false
+  }, 2000)
+}
 bus.on(EVENT_KEY.REMOVE_MUTED, () => {
   window.isMuted = false
 })

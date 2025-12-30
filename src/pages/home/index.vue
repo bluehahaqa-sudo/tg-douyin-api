@@ -243,7 +243,10 @@ import BaseMask from '@/components/BaseMask.vue'
 const nav = useNav()
 const baseStore = useBaseStore()
 const uploader = ref()
-const isMobile = ref(/Mobi|Android|iPhone/i.test(navigator.userAgent))
+// 检测是否移动端或 Telegram Mini App
+// WebApp 对象存在即表示在 Telegram 环境中（桌面端或移动端）
+const isTelegramWebApp = !!(window as any).Telegram?.WebApp
+const isMobile = ref(isTelegramWebApp || /Mobi|Android|iPhone/i.test(navigator.userAgent))
 
 const state = reactive({
   active: true,

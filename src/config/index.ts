@@ -1,5 +1,10 @@
+// API 基础地址配置
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'https://msgstr-anything-partners-chambers.trycloudflare.com'
+
 export default {
   baseUrl: 'https://dy.ttentau.top/imgs/',
+  apiUrl: API_BASE_URL,
   imgPath: '/imgs/',
   filePreview: 'http://192.168.0.103/static/uploads/'
 }

@@ -2,8 +2,23 @@ import axios, { type AxiosError, type AxiosRequestConfig, type AxiosResponse } f
 import config from '@/config'
 import { _notice } from './index'
 
+// 获取存储的 JWT token
+const getToken = (): string | null => {
+  return localStorage.getItem('auth_token')
+}
+
+// 保存 JWT token
+export const setToken = (token: string): void => {
+  localStorage.setItem('auth_token', token)
+}
+
+// 清除 token
+export const clearToken = (): void => {
+  localStorage.removeItem('auth_token')
+}
+
 export const axiosInstance = axios.create({
-  baseURL: config.baseUrl,
+  baseURL: config.apiUrl,
   timeout: 60000
 })
 
@@ -13,6 +28,11 @@ axiosInstance.interceptors.request.use(
     // 如果没有设置Content-Type，默认application/json
     if (!config.headers['Content-Type']) {
       config.headers['Content-Type'] = 'application/json'
+    }
+    // 添加 JWT token
+    const token = getToken()
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
     }
     return config
   },
